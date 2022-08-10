@@ -3,7 +3,8 @@ import socketio
 import cv2 as cv
 import base64
 from gpiozero import *
-# from picamera import Picamera
+from picamera import PiCamera
+
 MOTOR_A_PWM = 'GPIO12'     # PWM input for extension motor
 MOTOR_A_PHASE = 'GPIO5'    # Phase input for extension motor
 MOTOR_B_PWM = 'GPIO13'     # PWM input for rotation motor
@@ -15,7 +16,7 @@ IR_1 = 'GPIO23'            # IR Sensor 1
 IR_2 = 'GPIO24'            # IR Sensor 2
 IR_VCC = 'GPIO26'          # IR Sensor Power line
 
-# camera = Picamera()
+camera = PiCamera()
 URL_LOCAL = 'http://127.0.0.1:5000/'
 URL_CLOUD = 'https://screen-bot-proj.herokuapp.com/'
 E_MOTOR = PhaseEnableMotor(MOTOR_A_PHASE, MOTOR_A_PWM, pwm=True)    # Set up extension motor
@@ -113,22 +114,23 @@ def start_send_img(data):
     return 'OK'
 
 
-# sio.connect('http://127.0.0.1:5000/')
-# sio.emit('This is test in main function', "It\'s me")
-# sio.wait()
-# ENCODER_C1.when_activated = read_encoder
-# motor_pid(300)
+def system_init():
+    # sio.connect(URL_CLOUD)
+    print("System ready!\n")
+    print("Start to take pictures\n")
+    camera.capture('img_1.png')
 
-pos = 0
-print("System ready!\n")
 
+system_init()
 while True:
     # if IR_SENSOR_1.value == 0:
     #     pos = pos + 1
     #     print(pos)
     print("IR1: ", IR_SENSOR_1.value)
     # print("IR2: ", IR_SENSOR_2.value)
-    time.sleep(1)
+    time.sleep(0.1)
+
+
 
 
 
