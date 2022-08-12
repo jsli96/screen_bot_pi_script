@@ -44,13 +44,13 @@ POSITION = 0
 
 def pos_plus(gpio, level, tick):
     global POSITION
-    POSITION = POSITION -1
+    POSITION = POSITION + 1
     print(POSITION)
 
 
 def pos_minus(gpio, level, tick):
     global POSITION
-    POSITION = POSITION + 1
+    POSITION = POSITION - 1
     print(POSITION)
 
 
@@ -79,13 +79,13 @@ def motor_pid(input_target):
         print("i_error: ", i_error)
         print('u: ', u)
         if u > 0:
-            if callback_minus_status:
-                callback_minus.cancel()
-                callback_minus_status = False
+            if callback_plus_status:
+                callback_plus.cancel()
+                callback_plus_status = False
                 print("callback minus cancelled")
-            if not callback_plus_status:
-                callback_plus = pi.callback(ROTATION_C1, pigpio.RISING_EDGE, pos_plus)
-                callback_plus_status = True
+            if not callback_minus_status:
+                callback_minus = pi.callback(ROTATION_C1, pigpio.RISING_EDGE, pos_minus)
+                callback_minus_status = True
                 print("callback plus started")
             if u > 50:
                 u = 50.00
@@ -93,13 +93,13 @@ def motor_pid(input_target):
             # print('forward')
             R_MOTOR.forward(speed=power)
         else:
-            if callback_plus_status:
-                callback_plus.cancel()
-                callback_plus_status = True
-                print("callback plus cancelled")
-            if not callback_minus_status:
-                callback_minus = pi.callback(ROTATION_C1, pigpio.RISING_EDGE, pos_minus)
+            if callback_minus_status:
+                callback_minus.cancel()
                 callback_minus_status = True
+                print("callback plus cancelled")
+            if not callback_plus_status:
+                callback_plus = pi.callback(ROTATION_C1, pigpio.RISING_EDGE, pos_plus)
+                callback_plus_status = True
                 print("callback minus started")
             if u < -50:
                 u = -50
@@ -186,7 +186,7 @@ while True:
     # R_MOTOR.backward(speed=0.5)
     # time.sleep(2)
     # callback_minus.cancel()
-    motor_pid(300)
+    motor_pid(-300)
     time.sleep(2)
     # None
 
