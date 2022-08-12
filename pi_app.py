@@ -12,7 +12,7 @@ MOTOR_A_PHASE = 'GPIO5'  # Phase input for extension motor
 MOTOR_B_PWM = 'GPIO13'  # PWM input for rotation motor
 MOTOR_B_PHASE = 'GPIO6'  # Phase input for rotation motor
 # ROTATION_C1 = 'GPIO21'     # Motor encoder C1
-# ROTATION_C2 = 'GPIO20'     # Motor encoder C2
+ROTATION_C2 = 'GPIO20'     # Motor encoder C2
 ROTATION_VCC = 'GPIO16'  # Encoder power line
 IR_1 = 'GPIO23'  # IR Sensor 1
 IR_2 = 'GPIO24'  # IR Sensor 2
@@ -20,10 +20,10 @@ IR_VCC = 'GPIO26'  # IR Sensor Power line
 
 # -------------------Here below GPIO are using pigpio-------------------
 ROTATION_C1 = 21  # Motor encoder C1
-ROTATION_C2 = 20  # Motor encoder C2
-pi = pigpio.pi()
+# ROTATION_C2 = 20  # Motor encoder C2
+pi = pigpio.pi()  # Initial pigpio
 pi.set_mode(ROTATION_C1, pigpio.INPUT)
-pi.set_mode(ROTATION_C2, pigpio.INPUT)
+# pi.set_mode(ROTATION_C2, pigpio.INPUT)
 
 # --------------------Here below initial gpio function-------------------
 camera = PiCamera()
@@ -31,8 +31,8 @@ URL_LOCAL = 'http://127.0.0.1:5000/'
 URL_CLOUD = 'https://screen-bot-proj.herokuapp.com/'
 E_MOTOR = PhaseEnableMotor(MOTOR_A_PHASE, MOTOR_A_PWM, pwm=True)  # Set up extension motor
 R_MOTOR = PhaseEnableMotor(MOTOR_B_PHASE, MOTOR_B_PWM, pwm=True)  # Set up rotation motor
-# ENCODER_C1 = DigitalInputDevice(ROTATION_C1)    # Set up encoder C1
-# ENCODER_C2 = DigitalInputDevice(ROTATION_C2)    # Set up encoder C2
+# ENCODER_C1 = DigitalInputDevice(ROTATION_C1)                    # Set up encoder C1
+ENCODER_C2 = DigitalInputDevice(ROTATION_C2)                    # Set up encoder C2
 IR_SENSOR_1 = DigitalInputDevice(IR_1)  # Set up IR sensor 1
 IR_SENSOR_2 = DigitalInputDevice(IR_2)  # Set up IR sensor 2
 ENCODER_VCC = DigitalOutputDevice(ROTATION_VCC, initial_value=True)
@@ -57,6 +57,8 @@ def motor_pid(input_target):
     p_time = time.time()
     p_error = 0.00
     i_error = 0.00
+    cb_plus_status = False
+    cb_minus_status = False
     callback = pi.callback(ROTATION_C1, pigpio.RISING_EDGE, read_encoder)
 
     while True:
@@ -72,33 +74,63 @@ def motor_pid(input_target):
         i_error = i_error + error * de_dt
         # print("i_error: ", i_error)
         u = kp * error + kd * de_dt + ki * i_error
-        print('u: ', u)
+        # print('u: ', u)
         if u > 0:
-            if u > 100:
-                u = 100.00
-            power = u / 100
+            # if not cb_plus_status:
+            #     if cb_minus_status:
+            #         cb_minus.cancel()
+            #         cb_minus_status = False
+            #     cb_plus = pi.callback(ROTATION_C1, pigpio.RISING_EDGE, read_encoder_plus)
+            if u > 50:
+                u = 50.00
+            power = u / 50
+            # print('forward')
             R_MOTOR.forward(speed=power)
         else:
-            if u < -100:
-                u = -100
-            power = u / 100 + 1
+            # if not cb_minus_status:
+            #     if cb_plus_status:
+            #         cb_plus.cancel()
+            #         cb_plus_status = False
+            #     cb_minus = pi.callback(ROTATION_C1, pigpio.RISING_EDGE, read_encoder_minus)
+            if u < -50:
+                u = -50
+            power = u / 50 + 1
+            # print('backward')
             R_MOTOR.backward(speed=power)
-        if abs(error) < 2:
-            callback.cancel()
+        if abs(error) < 10:
+            # if cb_plus_status:
+            #     cb_plus_status = False
+            #     cb_plus.cancel()
+            # if cb_minus_status:
+            #     cb_minus_status = False
+            #     cb_minus.cancel()
             R_MOTOR.stop()
+            callback.cancel()
             break
         p_error = error
+        # print('Position: ', POSITION)
 
 
 def read_encoder(gpio, level, tick):
     global POSITION
-    b = pi.read(ROTATION_C2)
+    b = ENCODER_C2.value
     if b > 0:
         POSITION = POSITION + 1
     else:
         POSITION = POSITION - 1
     print('Position: ', POSITION)
-    # print(gpio, level, tick)
+
+
+# def read_encoder_plus(gpio, level, tick):
+#     global POSITION
+#     POSITION = POSITION + 1
+#     print('Position_plus: ', POSITION)
+#
+#
+# def read_encoder_minus(gpio, level, tick):
+#     global POSITION
+#     POSITION = POSITION - 1
+#     print('Position_minus: ', POSITION)
 
 
 @sio.event
@@ -135,10 +167,10 @@ def system_init():
     # callback_1 = pi.callback(ROTATION_C1, pigpio.RISING_EDGE, read_encoder)
     print("System ready!\n")
     print("Start to take pictures\n")
-    camera.capture('img_1.png')
+    # camera.capture('img_1.png')
     print("Image captured!")
     camera.close()
-    motor_pid(30)
+    motor_pid(-300)
 
 
 system_init()
